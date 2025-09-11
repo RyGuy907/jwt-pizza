@@ -6,12 +6,12 @@ As part of `Deliverable ⓵ Development deployment: JWT Pizza`, start up the app
 
 | User activity                                       | Frontend component | Backend endpoints | Database SQL |
 | --------------------------------------------------- | ------------------ | ----------------- | ------------ |
-| View home page                                      |                    |                   |              |
-| Register new user<br/>(t@jwt.com, pw: test)         |                    |                   |              |
-| Login new user<br/>(t@jwt.com, pw: test)            |                    |                   |              |
-| Order pizza                                         |                    |                   |              |
-| Verify pizza                                        |                    |                   |              |
-| View profile page                                   |                    |                   |              |
+| View home page                                      |     home.tsx         |       none        |    none      |
+| Register new user<br/>(t@jwt.com, pw: test)         |  register.jsx        |[POST] /api/auth  | `INSERT INTO user (name, email, password) VALUES (?, ?, ?)`<br/>`INSERT INTO userRole (userId, role, objectId) VALUES (?, ?, ?)` |
+| Login new user<br/>(t@jwt.com, pw: test)            |     login.tsx        | [PUT] /api/auth   | `INSERT INTO auth (token, userId) VALUES (?, ?) ON DUPLICATE KEY UPDATE token=token`<br/>`SELECT * FROM user WHERE email=?`<br/>`SELECT * FROM userRole WHERE userId=?` |
+| Order pizza                                         |   payment.jsx        | [POST] /api/order | `SELECT userId FROM auth WHERE token=?`<br/>`INSERT INTO dinerOrder (dinerId, franchiseId, storeId, date) VALUES (?, ?, ?, now())`<br/>`INSERT INTO orderItem (orderId, menuId, description, price) VALUES (?, ?, ?, ?)` |
+| Verify pizza                                        | delivery.tsx	    | [POST] /api/order/verify |none         |
+| View profile page                                   |dinerDashboard.tsx    | [GET] /api/order  | `SELECT userId FROM auth WHERE token=?` |
 | View franchise<br/>(as diner)                       |                    |                   |              |
 | Logout                                              |                    |                   |              |
 | View About page                                     |                    |                   |              |
