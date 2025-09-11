@@ -12,12 +12,12 @@ As part of `Deliverable ⓵ Development deployment: JWT Pizza`, start up the app
 | Order pizza                                         |   payment.jsx        | [POST] /api/order | `SELECT userId FROM auth WHERE token=?`<br/>`INSERT INTO dinerOrder (dinerId, franchiseId, storeId, date) VALUES (?, ?, ?, now())`<br/>`INSERT INTO orderItem (orderId, menuId, description, price) VALUES (?, ?, ?, ?)` |
 | Verify pizza                                        | delivery.tsx	    | [POST] /api/order/verify |none         |
 | View profile page                                   |dinerDashboard.tsx    | [GET] /api/order  | `SELECT userId FROM auth WHERE token=?` |
-| View franchise<br/>(as diner)                       |                    |                   |              |
-| Logout                                              |                    |                   |              |
-| View About page                                     |                    |                   |              |
-| View History page                                   |                    |                   |              |
-| Login as franchisee<br/>(f@jwt.com, pw: franchisee) |                    |                   |              |
-| View franchise<br/>(as franchisee)                  |                    |                   |              |
+| View franchise<br/>(as diner)                       |franchiseDashboard.tsx|[GET] /api/franchise/:userId| `SELECT id, name FROM store WHERE franchiseId=?` |
+| Logout                                              |    logout.tsx       | [DELETE] /api/auth | `SELECT userId FROM auth WHERE token=?`</br>`DELETE FROM auth WHERE token=?` |
+| View About page                                     |     about.tsx      |       none        |       none        |
+| View History page                                   |    history.tsx     |       none        |       none        |
+| Login as franchisee<br/>(f@jwt.com, pw: franchisee) |     login.tsx      | [PUT] /api/auth   | `INSERT INTO auth (token, userId) VALUES (?, ?) ON DUPLICATE KEY UPDATE token=token`<br/>`SELECT * FROM user WHERE email=?`<br/>`SELECT * FROM userRole WHERE userId=?` |
+| View franchise<br/>(as franchisee)                  |franchiseDashboard.tsx| [GET] /api/franchise/:userId | `SELECT objectId FROM userRole WHERE role='franchisee' AND userId=?` |
 | Create a store                                      |                    |                   |              |
 | Close a store                                       |                    |                   |              |
 | Login as admin<br/>(a@jwt.com, pw: admin)           |                    |                   |              |
