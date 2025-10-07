@@ -186,3 +186,15 @@ test('logout', async ({ page }) => {
   await page.getByRole('link', { name: 'Logout' }).click();
   await expect(page.getByRole('link', { name: 'Register' })).toBeVisible();
 });
+
+// register
+test('register', async ({ page }) => {
+  await basicInit(page);
+  await supportAuthOverrides(page, { handlePostRegister: true });
+  await page.getByRole('link', { name: 'Register' }).click();
+  await page.getByRole('textbox', { name: 'Full name' }).fill('user');
+  await page.getByRole('textbox', { name: 'Email address' }).fill('user@jwt.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('secret-pass');
+  await page.getByRole('button', { name: 'Register' }).click();
+  await expect(page.getByRole('link', { name: 'Logout' })).toBeVisible();
+});
