@@ -198,3 +198,107 @@ test('register', async ({ page }) => {
   await page.getByRole('button', { name: 'Register' }).click();
   await expect(page.getByRole('link', { name: 'Logout' })).toBeVisible();
 });
+
+// create and close franchise
+test('create and close franchise', async ({ page }) => {
+  test.setTimeout(500000);
+  await basicInit(page);
+  await page.route('*/**/api/auth', async (route) => {
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() ?? {};
+      if (body.email === 'a@jwt.com' && body.password === 'admin') {
+        await route.fulfill({
+          json: {
+            user: { id: '1', name: '常用名字', email: 'a@jwt.com', roles: [{ role: 'admin' }] },
+            token: 'adminToken',
+          },
+        });
+        return;
+      }
+    }
+    await route.fallback();
+  });
+  {
+    let created = false;
+    await page.route(/\/api\/franchise(\?.*)?$/, async (route) => {
+      const method = route.request().method();
+
+      if (method === 'POST') {
+        created = true;
+        await route.fulfill({
+          json: {
+            franchises: [
+              {
+                id: 2,
+                name: 'Sample Franchise A',
+                stores: [
+                  { id: 4, name: 'Location One' },
+                  { id: 5, name: 'Location Two' },
+                  { id: 6, name: 'Location Three' },
+                ],
+              },
+              { id: 3, name: 'Sample Franchise B', stores: [{ id: 7, name: 'Location Four' }] },
+              { id: 4, name: 'Sample Franchise C', stores: [] },
+              { id: 7, name: 'Sample Store', admin: [{ id: '3', name: 'pizza franchisee', email: 'f@jwt.com' }], stores: [] },
+            ],
+          },
+        });
+        return;
+      }
+
+      if (method === 'GET') {
+        const base = [
+          {
+            id: 2,
+            name: 'Sample Franchise A',
+            stores: [
+              { id: 4, name: 'Location One' },
+              { id: 5, name: 'Location Two' },
+              { id: 6, name: 'Location Three' },
+            ],
+          },
+          { id: 3, name: 'Sample Franchise B', stores: [{ id: 7, name: 'Location Four' }] },
+          { id: 4, name: 'Sample Franchise C', stores: [] },
+        ];
+        const withNew = [
+          ...base,
+          { id: 7, name: 'Sample Store', admin: [{ id: '3', name: 'pizza franchisee', email: 'f@jwt.com' }], stores: [] },
+        ];
+        await route.fulfill({ json: { franchises: created ? withNew : base } });
+        return;
+      }
+
+      if (method === 'DELETE') {
+        created = false;
+        await route.fulfill({ json: { message: 'deleted' } });
+        return;
+      }
+
+      await route.fallback();
+    });
+  }
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill('a@jwt.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('admin');
+  await page.getByRole('button', { name: /login/i }).click();
+  await page.waitForLoadState('networkidle');
+
+  const adminEntry =
+    (await page.getByRole('link', { name: /admin/i }).elementHandle({ timeout: 15000 })) ??
+    (await page.getByRole('button', { name: /admin/i }).elementHandle({ timeout: 15000 }));
+  expect(adminEntry).toBeTruthy();
+  await (adminEntry as any).click();
+
+  await page.getByRole('button', { name: /add franchise/i }).click();
+  await page.getByRole('textbox', { name: /franchise name/i }).fill('Sample Store');
+  await page.getByRole('textbox', { name: /franchisee admin email/i }).fill('user@jwt.com');
+  await page.getByRole('button', { name: /create/i }).click();
+  await expect(
+    page.getByRole('cell', { name: /sample store/i }).or(
+      page.getByRole('gridcell', { name: /sample store/i })
+    )
+  ).toBeVisible({ timeout: 15000 });
+  await page.getByRole('row', { name: /sample store/i }).getByRole('button').click();
+  await expect(page.getByText(/sorry to see you go/i)).toBeVisible();
+  await page.getByRole('button', { name: /close/i }).click();
+});
