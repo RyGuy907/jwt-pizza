@@ -302,3 +302,66 @@ test('create and close franchise', async ({ page }) => {
   await expect(page.getByText(/sorry to see you go/i)).toBeVisible();
   await page.getByRole('button', { name: /close/i }).click();
 });
+
+// create store and then close store
+test('create store and close store', async ({ page }) => {
+  await page.route('*/**/api/auth', async (route) => {
+    if (route.request().method() === 'PUT') {
+      const loginReq = { email: 'f@jwt.com', password: 'secret-pass' };
+      expect(route.request().postDataJSON()).toMatchObject(loginReq);
+      const loginRes = {
+        user: { id: 3, name: 'pizza franchisee', email: 'f@jwt.com', roles: [{ objectId: 7, role: 'franchisee' }] },
+        token: 'token',
+      };
+      await route.fulfill({ json: loginRes });
+      return;
+    }
+    await route.fallback();
+  });
+
+  await page.route('*/**/api/franchise/3', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ json: [sampleFranchise] });
+      return;
+    }
+    await route.fallback();
+  });
+
+  await page.route('*/**/api/franchise/7/store', async (route) => {
+    if (route.request().method() === 'POST') {
+      sampleFranchise.stores.push({ id: 1, name: 'The Best', totalRevenue: 0 });
+      await route.fulfill({ json: sampleFranchise });
+      return;
+    }
+    await route.fallback();
+  });
+
+  await page.route('*/**/api/franchise/7/store/1', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      sampleFranchise.stores = sampleFranchise.stores.filter((s) => s.id !== 1);
+      await route.fulfill({ json: { message: 'store deleted' } });
+      return;
+    }
+    await route.fallback();
+  });
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill('f@jwt.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('secret-pass');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('link', { name: 'Logout' })).toBeVisible();
+  await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
+
+  await expect(page.getByRole('link', { name: 'franchise-dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading')).toContainText('Sample Store');
+
+  await page.getByRole('button', { name: 'Create store' }).click();
+  await page.getByRole('textbox', { name: 'store name' }).fill('The Best');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByRole('cell', { name: 'The Best' })).toBeVisible();
+
+  await page.getByRole('row', { name: 'The Best 0 ₿ Close' }).getByRole('button').click();
+  await expect(page.getByText(/are you sure you want to/i)).toBeVisible();
+  await page.getByRole('button', { name: 'Close' }).click();
+});
