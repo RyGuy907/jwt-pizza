@@ -137,3 +137,52 @@ await page.waitForLoadState('networkidle');
   // Check balance
   await expect(page.getByText('0.008')).toBeVisible();
 });
+
+let sampleFranchise = {
+  id: 7,
+  name: 'Sample Store',
+  admin: [{ id: '3', name: 'pizza franchisee', email: 'f@jwt.com' }],
+  stores: [{ id: 1, name: 'Test', totalRevenue: 0 }],
+};
+
+async function supportAuthOverrides(
+  page: Page,
+  { handleDelete = false, handlePostRegister = false } = {}
+) {
+  await page.route('*/**/api/auth', async (route) => {
+    const method = route.request().method();
+
+    if (handleDelete && method === 'DELETE') {
+      await route.fulfill({ status: 200, json: { message: 'logout successful' } });
+      return;
+    }
+
+    if (handlePostRegister && method === 'POST') {
+      const body = route.request().postDataJSON() ?? {};
+      const { name, email, password } = body;
+      if (!name || !email || !password) {
+        await route.fulfill({ status: 400, json: { message: 'name, email, and password are required' } });
+        return;
+      }
+      const newUser = { id: '4', name, email, password, roles: [{ role: 'diner' }] };
+      await route.fulfill({ status: 200, json: { user: newUser, token: 'testToken' } });
+      return;
+    }
+    await route.fallback();
+  });
+}
+
+// logout
+test('logout', async ({ page }) => {
+  await basicInit(page);
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill('d@jwt.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('a');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('link', { name: 'KC' })).toBeVisible();
+  await supportAuthOverrides(page, { handleDelete: true });
+
+  await page.getByRole('link', { name: 'Logout' }).click();
+  await expect(page.getByRole('link', { name: 'Register' })).toBeVisible();
+});
