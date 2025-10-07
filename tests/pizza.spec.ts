@@ -365,3 +365,13 @@ test('create store and close store', async ({ page }) => {
   await expect(page.getByText(/are you sure you want to/i)).toBeVisible();
   await page.getByRole('button', { name: 'Close' }).click();
 });
+
+test('visit about and history pages', async ({ page }) => {
+await page.goto('/');
+await page.getByText('Pizza is a universal language').click();
+await page.getByText('Pizza is an absolute delight').click();
+await page.locator('html').click();
+await page.getByRole('contentinfo').getByRole('link', { name: 'Franchise' }).click();
+await page.getByRole('link', { name: 'About' }).click();
+await page.getByRole('link', { name: 'History' }).click();
+});
