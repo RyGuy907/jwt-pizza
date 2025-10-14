@@ -467,29 +467,6 @@ await expect(
   await expect(page.getByRole('button', { name: 'Next' })).toBeEnabled();
 });
 
-// test('adminDashboard 3', async ({ page }) => {
-//   await page.goto('/');
-//   const adminUser = new User1('a@jwt.com', 'admin', 'Admin User', 1);
-//   await login(page, adminUser, 'admin');
-//   await page.getByRole('link', { name: 'Login' }).click();
-//   await page.getByRole('textbox', { name: 'Email address' }).fill(adminUser.email);
-//   await page.getByRole('textbox', { name: 'Password' }).fill(adminUser.password);
-//   await page.getByRole('button', { name: 'Login' }).click();
-//   await listUsersMockAPI(page);
-//   await adminFranchiseMockApi(page);
-//   await page.getByRole('link', { name: 'ad' }).click();
-// await page.waitForLoadState('networkidle');
-// await expect(
-//   page.getByRole('heading', { name: /Mama Ricci's kitchen|SliceWorks/i })
-// ).toBeVisible();
-//   await listUsersFilterMockAPI(page);
-//   await page.getByRole('textbox', { name: 'Name' }).click();
-//   await page.getByRole('textbox', { name: 'Name' }).fill('sam roberts');
-//   await page.getByRole('button', { name: 'Search' }).click();
-//   await expect(page.getByRole('cell', { name: 'sam roberts' }).first()).toBeVisible();
-//   await expect(page.getByRole('button', { name: 'Prev' })).toBeDisabled();
-// });
-
 test('delete user', async ({ page }) => {
   await page.goto('/');
   const adminUser = new User1('a@jwt.com', 'admin', 'Admin User', 1);
