@@ -1,6 +1,9 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from 'playwright-test-coverage';
 import { User, Role } from '../src/service/pizzaService';
+import {User1, registerMockAPI, updateUserMockAPI, 
+  logout, login, adminFranchiseMockApi, listUsersMockAPI, 
+  listUsersFilterMockAPI, deleteUserMockAPI, deletedUserMockAPI} from './testUtils'
 
 test('home page', async ({ page }) => {
   await page.goto('/');
@@ -374,4 +377,141 @@ await page.locator('html').click();
 await page.getByRole('contentinfo').getByRole('link', { name: 'Franchise' }).click();
 await page.getByRole('link', { name: 'About' }).click();
 await page.getByRole('link', { name: 'History' }).click();
+});
+
+test('updateUser', async ({ page }) => {
+  const email = `user${Math.floor(Math.random() * 10000)}@jwt.com`;
+  const initialUser = new User1(email, 'diner', 'pizza diner', 3);
+  await registerMockAPI(page, initialUser);
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Register' }).click();
+  await page.getByRole('textbox', { name: 'Full name' }).fill(initialUser.name);
+  await page.getByRole('textbox', { name: 'Email address' }).fill(initialUser.email);
+  await page.getByRole('textbox', { name: 'Password' }).fill(initialUser.password);
+  await page.getByRole('button', { name: 'Register' }).click();
+  await page.getByRole('link', { name: 'pd' }).click();
+  await expect(page.getByRole('main')).toContainText('pizza diner');
+  await updateUserMockAPI(page, initialUser);
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await expect(page.locator('h3')).toContainText('Edit user');
+  await page.getByRole('button', { name: 'Update' }).click();
+  await page.waitForSelector('[role="dialog"].hidden', { state: 'attached' });
+  await expect(page.getByRole('main')).toContainText('pizza diner');
+  const updatedUser = new User1(email, 'diner', 'pizza dinerx', 3);
+  await page.unroute('*/**/api/user/**');
+  await updateUserMockAPI(page, updatedUser);
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await expect(page.locator('h3')).toContainText('Edit user');
+  await page.getByRole('textbox').first().fill('pizza dinerx');
+  await page.getByRole('button', { name: 'Update' }).click();
+  await page.waitForSelector('[role="dialog"].hidden', { state: 'attached' });
+  await expect(page.getByRole('main')).toContainText('pizza dinerx');
+  await page.unroute('*/**/api/auth');
+  await logout(page);
+  await page.getByRole('link', { name: 'Logout' }).click();
+  await page.unroute('*/**/api/auth');
+  await login(page, updatedUser, 'diner');
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill(email);
+  await page.getByRole('textbox', { name: 'Password' }).fill('diner');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await page.getByRole('link', { name: 'pd' }).click();
+  await expect(page.getByRole('main')).toContainText('pizza dinerx');
+});
+
+test('adminDashboard 1', async ({ page }) => {
+  await page.goto('/');
+  const adminUser = new User1('admin@jwt.com', 'admin', 'Admin User', 1);
+  await login(page, adminUser, 'admin');
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill(adminUser.email);
+  await page.getByRole('textbox', { name: 'Password' }).fill(adminUser.password);
+  await page.getByRole('button', { name: 'Login' }).click();
+  await listUsersMockAPI(page);
+  await adminFranchiseMockApi(page);
+  await page.getByRole('link', { name: 'ad' }).click();
+await page.waitForLoadState('networkidle');
+await expect(
+  page.getByRole('heading', { name: /Mama Ricci's kitchen|SliceWorks/i })
+).toBeVisible();
+  await expect(page.getByRole('main')).toContainText('Users');
+  await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Email' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Role' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: '常用名字' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'a@jwt.com' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Admin' }).first()).toBeVisible();
+});
+
+test('adminDahsboard 2', async ({ page }) => {
+  await page.goto('/');
+  const adminUser = new User1('admin@jwt.com', 'admin', 'Admin User', 1);
+  await login(page, adminUser, 'admin');
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill(adminUser.email);
+  await page.getByRole('textbox', { name: 'Password' }).fill(adminUser.password);
+  await page.getByRole('button', { name: 'Login' }).click();
+  await listUsersMockAPI(page, true);
+  await adminFranchiseMockApi(page);
+  await page.getByRole('link', { name: 'ad' }).click();
+await page.waitForLoadState('networkidle');
+await expect(
+  page.getByRole('heading', { name: /Mama Ricci's kitchen|SliceWorks/i })
+).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Prev' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Next' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByRole('button', { name: 'Prev' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Prev' }).click();
+  await expect(page.getByRole('button', { name: 'Prev' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Next' })).toBeEnabled();
+});
+
+// test('adminDashboard 3', async ({ page }) => {
+//   await page.goto('/');
+//   const adminUser = new User1('a@jwt.com', 'admin', 'Admin User', 1);
+//   await login(page, adminUser, 'admin');
+//   await page.getByRole('link', { name: 'Login' }).click();
+//   await page.getByRole('textbox', { name: 'Email address' }).fill(adminUser.email);
+//   await page.getByRole('textbox', { name: 'Password' }).fill(adminUser.password);
+//   await page.getByRole('button', { name: 'Login' }).click();
+//   await listUsersMockAPI(page);
+//   await adminFranchiseMockApi(page);
+//   await page.getByRole('link', { name: 'ad' }).click();
+// await page.waitForLoadState('networkidle');
+// await expect(
+//   page.getByRole('heading', { name: /Mama Ricci's kitchen|SliceWorks/i })
+// ).toBeVisible();
+//   await listUsersFilterMockAPI(page);
+//   await page.getByRole('textbox', { name: 'Name' }).click();
+//   await page.getByRole('textbox', { name: 'Name' }).fill('sam roberts');
+//   await page.getByRole('button', { name: 'Search' }).click();
+//   await expect(page.getByRole('cell', { name: 'sam roberts' }).first()).toBeVisible();
+//   await expect(page.getByRole('button', { name: 'Prev' })).toBeDisabled();
+// });
+
+test('delete user', async ({ page }) => {
+  await page.goto('/');
+  const adminUser = new User1('a@jwt.com', 'admin', 'Admin User', 1);
+  await login(page, adminUser, 'admin');
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill(adminUser.email);
+  await page.getByRole('textbox', { name: 'Password' }).fill(adminUser.password);
+  await page.getByRole('button', { name: 'Login' }).click();
+  await listUsersMockAPI(page);
+  await adminFranchiseMockApi(page);
+  await page.getByRole('link', { name: 'ad' }).click();
+await page.waitForLoadState('networkidle');
+await expect(
+  page.getByRole('heading', { name: /Mama Ricci's kitchen|SliceWorks/i })
+).toBeVisible();
+  await page.unroute('*/**/api/user**');
+  await deletedUserMockAPI(page);
+  await deleteUserMockAPI(page, 2);
+  const row = page.getByRole('row', { name: 'pizza diner d@jwt.com' });
+  await expect(row.getByRole('button')).toBeVisible();
+  await row.getByRole('button').click();
+  await expect(page.getByText('Are you sure you want to')).toBeVisible();
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await expect(row).not.toBeVisible();
 });
