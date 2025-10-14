@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import NotFound from './notFound';
 import Button from '../components/button';
 import { pizzaService } from '../service/service';
-import { Franchise, FranchiseList, Role, Store, User } from '../service/pizzaService';
+import { Franchise, FranchiseList, UserList, Role, Store, User } from '../service/pizzaService';
 import { TrashIcon } from '../icons';
 
 interface Props {
@@ -16,12 +16,19 @@ export default function AdminDashboard(props: Props) {
   const [franchiseList, setFranchiseList] = React.useState<FranchiseList>({ franchises: [], more: false });
   const [franchisePage, setFranchisePage] = React.useState(0);
   const filterFranchiseRef = React.useRef<HTMLInputElement>(null);
-
+  const [userList, setUserList] = React.useState<UserList>({ users: [], more: false });
+  const [userPage, setUserPage] = React.useState(1);
+  const filterUserRef = React.useRef<HTMLInputElement>(null);
   React.useEffect(() => {
     (async () => {
       setFranchiseList(await pizzaService.getFranchises(franchisePage, 3, '*'));
     })();
   }, [props.user, franchisePage]);
+  React.useEffect(() => {
+    (async () => {
+      setUserList(await pizzaService.getUsers(userPage, 10, '*'));
+    })();
+  }, [props.user, userPage]);
 
   function createFranchise() {
     navigate('/admin-dashboard/create-franchise');
@@ -39,10 +46,125 @@ export default function AdminDashboard(props: Props) {
     setFranchiseList(await pizzaService.getFranchises(franchisePage, 10, `*${filterFranchiseRef.current?.value}*`));
   }
 
+  async function filterUsers() {
+    setUserList(await pizzaService.getUsers(userPage, 10, `*${filterUserRef.current?.value}*`));
+  }
+
+  function deleteUser(user: User) {
+    navigate('/admin-dashboard/delete-user', { state: { user: user } });
+  }
+
+  function roleLabel(user?: User | null) {
+    const roles = user?.roles ?? [];
+    if (roles.some((r) => r.role === Role.Admin)) return 'Admin';
+    if (roles.some((r) => r.role === Role.Franchisee)) return 'Franchisee';
+    return roles.map((r) => r.role).join(', ');
+  }
+    
   let response = <NotFound />;
   if (Role.isRole(props.user, Role.Admin)) {
     response = (
       <View title="Mama Ricci's kitchen">
+        <div className="text-start py-8 px-4 sm:px-6 lg:px-8">
+  <h3 className="text-neutral-100 text-2xl font-semibold tracking-tight">Users</h3>
+
+  <div className="mt-4 rounded-2xl bg-white/90 shadow-xl ring-1 ring-black/5 backdrop-blur">
+    <div className="flex flex-col">
+      <div className="-m-1.5 overflow-x-auto">
+        <div className="p-1.5 min-w-full inline-block align-middle">
+          <div className="overflow-hidden rounded-xl">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-800 text-neutral-100 sticky top-0 z-10">
+                <tr>
+                  {['Name', 'Email', 'Role', 'Action'].map((header) => (
+                    <th
+                      key={header}
+                      scope="col"
+                      className="px-6 py-3 text-center text-xs font-semibold tracking-wider"
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100">
+                {userList.users.map((user, index) => (
+                  <tr
+                    key={index}
+                    className="bg-white hover:bg-orange-50/60 transition-colors"
+                  >
+                    <td className="text-start px-4 py-3 whitespace-nowrap text-base font-mono text-orange-700">
+                      {user.name}
+                    </td>
+                    <td className="text-start px-4 py-3 whitespace-nowrap text-sm text-slate-700">
+                      {user.email}
+                    </td>
+                    <td className="text-start px-4 py-3 whitespace-nowrap text-sm text-slate-700">
+                      {roleLabel(user)}
+                    </td>
+                    <td className="px-6 py-2 whitespace-nowrap text-end">
+                      <button
+                        type="button"
+                        className="px-2 py-1 inline-flex items-center gap-x-2 text-sm font-semibold rounded-md border border-orange-300 text-orange-700 hover:border-orange-500 hover:text-orange-900 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
+                        onClick={() => deleteUser(user)}
+                      >
+                        X
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+
+              <tfoot className="bg-slate-50">
+                <tr>
+                  <td className="px-3 py-3">
+                    <div className="flex items-center">
+                      <input
+                        type="text"
+                        ref={filterUserRef}
+                        name="filterUser"
+                        placeholder="Name"
+                        className="px-3 py-2 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                      />
+                      <button
+                        type="submit"
+                        className="ml-2 px-3 py-2 text-sm font-semibold rounded-md border border-orange-300 text-orange-700 hover:border-orange-500 hover:text-orange-900 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
+                        onClick={filterUsers}
+                      >
+                        Search
+                      </button>
+                    </div>
+                  </td>
+
+                  <td colSpan={2} className="px-3 py-3 text-end text-sm">
+                    <div className="inline-flex gap-2">
+                      <button
+                        className="w-16 py-2 text-sm font-semibold rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-orange-100 disabled:bg-slate-200 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
+                        onClick={() => setUserPage(userPage - 1)}
+                        disabled={userPage <= 1}
+                      >
+                        Prev
+                      </button>
+                      <button
+                        className="w-16 py-2 text-sm font-semibold rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-orange-100 disabled:bg-slate-200 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
+                        onClick={() => setUserPage(userPage + 1)}
+                        disabled={!userList.more}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
         <div className="text-start py-8 px-4 sm:px-6 lg:px-8">
           <h3 className="text-neutral-100 text-xl">Franchises</h3>
           <div className="bg-neutral-100 overflow-clip my-4">
